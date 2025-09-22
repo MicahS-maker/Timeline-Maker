@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timeline Maker — Single-file</title>
+  <style>
+    :root{--accent:#2b6cb0;--bg:#f7fbff;--card:#ffffff;--muted:#6b7280}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;margin:0;background:linear-gradient(180deg,var(--bg),#fff);color:#111}
+    header{padding:18px 24px;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.6);backdrop-filter:blur(4px);box-shadow:0 1px 0 rgba(0,0,0,0.04)}
+    header h1{font-size:18px;margin:0}
+    .toolbar{margin-left:auto;display:flex;gap:8px}
+    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.secondary{background:transparent;color:var(--accent);border:1px solid rgba(43,108,176,0.12)}
+    .wrap{max-width:1100px;margin:22px auto;padding:0 18px}
+    .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .timeline{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    /* --- Vertical Mode: Multiple cards per line --- */
+    .timeline.vertical {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .timeline.vertical .event {
+      min-width:300px;
+      max-width:360px;
+      box-shadow:0 4px 24px rgba(13,38,59,0.12);
+      background:var(--card);
+      padding:20px 16px;
+      margin-bottom:40px;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    .timeline.vertical .meta,
+    .timeline.vertical .content {
+      width:100%;
+      text-align:center;
+    }
+    .timeline.vertical .thumb {
+      max-width: 96%;
+      width: 100%;
+      height: auto;
+      max-height:180px;
+      border-radius:8px;
+      object-fit:cover;
+      background:linear-gradient(90deg,#fff,#eee);
+      margin:10px auto 0 auto;
+      display:block;
+      order:2;
+    }
+    .timeline.vertical .event-controls {
+      width: 100%;
+      display:flex;
+      flex-direction:row;
+      gap:8px;
+      justify-content:center;
+      margin-top: 12px;
+    }
+    /* --- Compact Mode: 4 cards per line --- */
+    .timeline.compact {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .timeline.compact .event {
+      flex: 0 1 calc(25% - 14px);
+      min-width: 200px;
+      max-width: 270px;
+      box-shadow:0 2px 12px rgba(13,38,59,0.10);
+      background:var(--card);
+      padding:10px 8px;
+      margin-bottom:20px;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      font-size:13px;
+      word-break:break-word;
+      overflow:hidden;
+    }
+    .timeline.compact .meta,
+    .timeline.compact .content {
+      width:100%;
+      text-align:center;
+      margin-bottom:0;
+    }
+    .timeline.compact .title {
+      font-size:13px;
+      font-weight:700;
+      margin:0;
+      width:100%;
+      text-align:center;
+      word-break:break-word;
+      overflow-wrap:break-word;
+    }
+    .timeline.compact .date {
+      font-size:12px;
+      font-weight:600;
+      color:var(--accent);
+      margin-top:6px;
+      width:100%;
+      text-align:center;
+      word-break:break-word;
+      overflow-wrap:break-word;
+    }
+    .timeline.compact .desc {
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12px;
+      width:100%;
+      text-align:center;
+      word-break:break-word;
+      overflow-wrap:break-word;
+    }
+    .timeline.compact .thumb {
+      width:140px;
+      height:80px;
+      border-radius:6px;
+      object-fit:cover;
+      background:linear-gradient(90deg,#fff,#eee);
+      display:block;
+      margin:10px auto 0 auto;
+      max-width:96%;
+      max-height:120px;
+      order:2;
+    }
+    .timeline.compact .event-controls {
+      width: 100%;
+      display:flex;
+      flex-direction:row;
+      gap:6px;
+      justify-content:center;
+      margin-top: 10px;
+    }
+    .timeline.compact .event-controls button {
+      font-size:11px;
+      padding:5px 8px;
+      border-radius:6px;
+      min-width:32px;
+      min-height:24px;
+      line-height:1.1;
+    }
+    /* Mobile: Stack cards in compact mode, one per line */
+    @media (max-width:900px){
+      .timeline.compact .event {
+        flex: 0 1 100%;
+        min-width:160px;
+        max-width:95vw;
+      }
+      .timeline.vertical .event{min-width:220px;max-width:90vw;}
+      .thumb{width:140px;height:90px;}
+    }
+    @media (max-width:720px){
+      .timeline.compact .event {flex: 0 1 100%;min-width:120px;}
+      .event{flex-direction:column}
+      .meta{width:auto}
+      .thumb{width:100%;height:180px}
+      .timeline.vertical{gap:7px;}
+      .timeline.compact{gap:7px;}
+    }
+    @media (max-width:540px){
+      .timeline.compact {flex-direction:column;gap:10px;}
+      .timeline.compact .event {flex: 0 1 100%;width:100%;max-width:none;min-width:0;}
+      .timeline.compact .thumb {width:100%;height:auto;}
+      .timeline.vertical .event {width:100%;max-width:none;min-width:0;}
+      .timeline.vertical .thumb {width:100%;height:auto;}
+    }
+    /* --- Editor-only styles above --- */
+    .event .meta{width:160px;flex-shrink:0}
+    .event .content{flex:1}
+    .editable{outline:none}
+    .small{font-size:13px;color:var(--muted)}
+    .flex{display:flex;gap:8px;align-items:center}
+    .form-row{display:flex;gap:8px;align-items:center}
+    .input,select{padding:8px;border-radius:8px;border:1px solid #e6eef8;background:white}
+    .separator{height:1px;background:linear-gradient(90deg,transparent,#eee,transparent);margin:18px 0}
+    .hint{font-size:13px;color:var(--muted)}
+    footer{max-width:1100px;margin:22px auto;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#2b6cb0"/><path d="M7 12h10M7 16h6M7 8h10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1>Timeline Maker — single HTML file</h1>
+    <div class="toolbar">
+      <button id="addBtn">+ Add event</button>
+      <button id="exportBtn" class="secondary">Export JSON</button>
+      <button id="importBtn" class="secondary">Import JSON</button>
+      <button id="downloadBtn">Download HTML</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="controls">
+      <div class="form-row">
+        <label class="small">Default date</label>
+        <input id="defaultDate" class="input" type="date" />
+      </div>
+      <div class="form-row">
+        <label class="small">Layout</label>
+        <select id="layoutSelect" class="input">
+          <option value="vertical">Vertical</option>
+          <option value="compact">Compact</option>
+        </select>
+      </div>
+      <div class="hint">Tip: Click any title or description to edit. Use the image picker to upload pictures.</div>
+    </section>
+    <div class="separator"></div>
+    <section id="timeline" class="timeline vertical" aria-live="polite">
+      <!-- events will be inserted here -->
+    </section>
+    <template id="eventTpl">
+      <article class="event" draggable="false">
+        <div class="meta">
+          <div class="date editable" contenteditable="true">2025-09-16</div>
+          <div class="small">Date (click to edit)</div>
+        </div>
+        <div class="content">
+          <div>
+            <div class="title editable" contenteditable="true">New event title</div>
+            <div class="desc editable" contenteditable="true">Short description. Click to edit.</div>
+          </div>
+          <img class="thumb" src="" alt="thumbnail" />
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:center;">
+          <label class="small" for="fileInput">Image</label>
+          <input type="file" accept="image/*" class="imgInput" />
+          <button class="secondary removeImageBtn">Remove image</button>
+        </div>
+        <div class="event-controls">
+          <button class="secondary upBtn">↑</button>
+          <button class="secondary downBtn">↓</button>
+          <button class="secondary deleteBtn">Delete</button>
+        </div>
+      </article>
+    </template>
+  </main>
+  <footer>Made with ❤️ — Micah Southam is the best.</footer>
+  <script>
+    const timeline = document.getElementById('timeline');
+    const tpl = document.getElementById('eventTpl');
+    const addBtn = document.getElementById('addBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const defaultDate = document.getElementById('defaultDate');
+    const layoutSelect = document.getElementById('layoutSelect');
+    defaultDate.value = new Date().toISOString().slice(0,10);
+
+    function createEvent(data = {}){
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      const dateEl = node.querySelector('.date');
+      const titleEl = node.querySelector('.title');
+      const descEl = node.querySelector('.desc');
+      const imgEl = node.querySelector('.thumb');
+      const fileInput = node.querySelector('.imgInput');
+      const removeImageBtn = node.querySelector('.removeImageBtn');
+      const upBtn = node.querySelector('.upBtn');
+      const downBtn = node.querySelector('.downBtn');
+      const deleteBtn = node.querySelector('.deleteBtn');
+      dateEl.innerText = data.date || defaultDate.value || '';
+      titleEl.innerText = data.title || 'New event title';
+      descEl.innerText = data.description || 'Short description. Click to edit.';
+      if(data.image){
+        imgEl.src = data.image;
+        imgEl.style.display = 'block';
+      }
+      fileInput.addEventListener('change', e => {
+        const f = e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          imgEl.src = reader.result;
+          imgEl.style.display = 'block';
+        };
+        reader.readAsDataURL(f);
+      });
+      removeImageBtn.addEventListener('click', ()=>{
+        imgEl.src = '';
+        imgEl.style.display = 'none';
+        fileInput.value = '';
+      });
+      upBtn.addEventListener('click', ()=>{
+        const prev = node.previousElementSibling;
+        if(prev) timeline.insertBefore(node, prev);
+      });
+      downBtn.addEventListener('click', ()=>{
+        const next = node.nextElementSibling;
+        if(next) timeline.insertBefore(next, node);
+      });
+      deleteBtn.addEventListener('click', ()=>{
+        if(confirm('Delete this event?')) node.remove();
+      });
+      timeline.appendChild(node);
+      return node;
+    }
+
+    addBtn.addEventListener('click', ()=>createEvent());
+
+    exportBtn.addEventListener('click', ()=>{
+      const data = serialize();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'timeline.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    importBtn.addEventListener('click', ()=>{
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.addEventListener('change', async e=>{
+        const f = e.target.files[0];
+        if(!f) return;
+        const text = await f.text();
+        try{
+          const obj = JSON.parse(text);
+          loadFrom(obj);
+        }catch(err){alert('Invalid JSON file');}
+      });
+      input.click();
+    });
+
+    downloadBtn.addEventListener('click', ()=>{
+      const html = buildStandaloneHTML();
+      const blob = new Blob([html], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'timeline-maker.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function serialize(){
+      const events = Array.from(timeline.children).map(e=>{
+        const date = e.querySelector('.date').innerText.trim();
+        const title = e.querySelector('.title').innerText.trim();
+        const description = e.querySelector('.desc').innerText.trim();
+        const img = e.querySelector('.thumb').style.display === 'none' ? '' : e.querySelector('.thumb').src;
+        return {date,title,description,image: img};
+      });
+      return {meta:{generated:new Date().toISOString(),layout:layoutSelect.value},events};
+    }
+
+    function loadFrom(obj){
+      timeline.innerHTML='';
+      (obj.events||[]).forEach(ev=> createEvent(ev));
+      setLayout(obj.meta?.layout || 'vertical');
+    }
+
+    function buildStandaloneHTML(){
+      const data = serialize();
+      // Horizontal layout CSS and dot above card, wrapping enabled and per-event line:
+      const horizontalCSS = `
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:18px;background:#fff;color:#111}
+        h1{margin-bottom:30px;}
+        .timeline{display:flex;flex-direction:column;gap:0;position:relative;align-items:flex-start;padding:70px 0 80px 0;min-height:320px;background:linear-gradient(180deg,#f7fbff,#fff 80%);overflow-x:visible;}
+        .timeline-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:48px;position:relative;align-items:flex-start;width:100%;}
+        .event{display:flex;flex-direction:column;align-items:center;min-width:300px;max-width:360px;box-shadow:0 4px 24px rgba(13,38,59,0.12);background:#fff;padding:20px 16px;margin-bottom:40px;position:relative;}
+        .event::after{content:"";position:absolute;top:-30px;left:-24px;right:-24px;height:5px;background:#2b6cb0;border-radius:2px;z-index:0;}
+        .dot{width:16px;height:16px;background:#2b6cb0;border-radius:50%;position:absolute;top:-38px;left:50%;transform:translateX(-50%);z-index:2;border:3px solid #fff;box-shadow:0 0 0 4px #f7fbff;}
+        .date{font-weight:700;color:#2b6cb0;margin-top:8px;}
+        .title{font-size:16px;font-weight:700;margin:0}
+        .desc{margin-top:8px;color:#6b7280}
+        .thumb{width:220px;height:130px;border-radius:8px;object-fit:cover;background:linear-gradient(90deg,#fff,#eee);margin-top:10px;}
+        .vertical-connector{
+          width:5px;
+          height:48px;
+          background:#2b6cb0;
+          border-radius:2px;
+          position:absolute;
+          z-index:2;
+          left:0;
+          top:100%;
+          transform:translateX(0);
+          display:block;
+        }
+        footer{margin-top:36px;text-align:center;color:#666;font-size:13px}
+        @media (max-width:900px){
+          .event{min-width:220px;max-width:90vw;}
+          .thumb{width:140px;height:90px;}
+        }
+        @media (max-width:720px){
+          .timeline-row{gap:16px;}
+          .event{min-width:140px;}
+        }
+      </style>
+      `;
+      function renderRows(events){
+        const maxPerRow = 4;
+        let html = '';
+        for(let i=0; i<events.length; i+=maxPerRow){
+          html += `<div class="timeline-row">` +
+            events.slice(i,i+maxPerRow).map(ev=>
+              `<article class="event"><div class="dot"></div><div class="date">${escapeHtml(ev.date)}</div><h3 class="title">${escapeHtml(ev.title)}</h3><p class="desc">${escapeHtml(ev.description)}</p>${ev.image?`<img class="thumb" src="${ev.image}" alt="image"/>`:''}</article>`
+            ).join('') +
+            `</div>`;
+          if(i+maxPerRow < events.length){
+            html += `<div class="vertical-connector" style="display:block;position:absolute;left:0;top:100%;"></div>`;
+          }
+        }
+        return html;
+      }
+      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Timeline Maker (view)</title>
+      ${horizontalCSS}</head><body><h1>Timeline Maker</h1><section class="timeline">
+        ${renderRows(data.events)}
+      </section><footer>Made by Micah Southam</footer></body></html>`;
+    }
+
+    function escapeHtml(s){
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setLayout(layout){
+      timeline.classList.remove('vertical','compact');
+      timeline.classList.add(layout);
+    }
+
+    layoutSelect.addEventListener('change',()=>{
+      setLayout(layoutSelect.value);
+    });
+
+    // Initial demo data
+    createEvent({date:'1994-06-15',title:'Project start',description:'Project kickoff and planning meeting'});
+    createEvent({date:'2000-01-01',title:'Milestone A',description:'First major milestone achieved'});
+  </script>
+</body>
+</html>
